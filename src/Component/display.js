@@ -4,6 +4,9 @@ import "./display.css"; // Custom CSS for display and responsiveness
 import { collection, getDocs } from "firebase/firestore";
 import { FaCopy } from "react-icons/fa"; // Import FontAwesome copy icon
 import * as XLSX from "xlsx"; // Import xlsx library for Excel download
+import axios from "axios";
+import * as cheerio from "cheerio";
+
 
 // Utility function to format numbers based on Nepalese numbering system
 const formatNumberNepal = (num) => {
@@ -18,6 +21,7 @@ const formatNumberNepal = (num) => {
 const DisplayStockList = () => {
   const [stocks, setStocks] = useState([]);
   const [sortedStocks, setSortedStocks] = useState([]);
+  const [ltpData, setLtpData] = useState({}); // State to store LTPs
   const [sortKey, setSortKey] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
   const [selectedSector, setSelectedSector] = useState("All");
@@ -41,9 +45,36 @@ const DisplayStockList = () => {
         });
         setStocks(fetchedStocks);
         setSortedStocks(fetchedStocks); // Initialize sorted stocks
+
+        // Fetch LTP for all stocks
+        fetchLTP(fetchedStocks);
       } catch (error) {
         console.error("Error fetching stocks: ", error);
       }
+    };
+
+    const fetchLTP = async (stocks) => {
+      const ltpResults = {};
+      for (const stock of stocks) {
+        try {
+          const symbol = stock.name;
+          const url = `https://corsproxy.io/?https://merolagani.com/CompanyDetail.aspx?symbol=${symbol}`;
+          const response = await axios.get(url);
+          const $ = cheerio.load(response.data);
+          const ltp = $("#ctl00_ContentPlaceHolder1_CompanyDetail1_lblMarketPrice").text();
+
+
+          if (ltp) {
+            ltpResults[symbol] = ltp;
+          } else {
+            ltpResults[symbol] = "N/A";
+          }
+        } catch (error) {
+          console.error(`Error fetching LTP for ${stock.name}: `, error);
+          ltpResults[stock.name] = "Error";
+        }
+      }
+      setLtpData(ltpResults);
     };
 
     fetchStocks();
@@ -111,6 +142,7 @@ const DisplayStockList = () => {
         BookValuePerShare: stock.bookValue,
         EPS: stock.eps,
         Remarks: stock.remark,
+        LTP: ltpData[stock.name] || "N/A",
       };
     });
 
@@ -192,6 +224,7 @@ const DisplayStockList = () => {
                 <th>% of Promoter & Public</th>
                 <th>Book Value Per Share</th>
                 <th>EPS</th>
+                <th>LTP</th>
                 <th>Remarks</th>
               </tr>
             </thead>
@@ -238,6 +271,7 @@ const DisplayStockList = () => {
                       </td>
                       <td>{stock.bookValue}</td>
                       <td>{stock.eps}</td>
+                      <td>{ltpData[stock.name] || "N/A"}</td>
                       <td>{stock.remark}</td>
                     </tr>
                   );
