@@ -8,6 +8,7 @@ import "./form.css"; // Import your CSS styles
 const EditStockForm = () => {
   const [stockId, setStockId] = useState("");
   const [name, setName] = useState("");
+  const [sector, setSector] = useState("");
   const [listedDate, setListedDate] = useState("");
   const [totalListedShares, setTotalListedShares] = useState("");
   const [promoterShare, setPromoterShare] = useState("");
@@ -15,12 +16,42 @@ const EditStockForm = () => {
   const [eps, setEps] = useState("");
   const [remark, setRemark] = useState("");
 
+  const [publicShare, setPublicShare] = useState("");
+  const [promoterPublicPercent, setPromoterPublicPercent] = useState("");
+  const [lockInPeriod, setLockInPeriod] = useState("");
+
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
 
   const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState(false); // Track modal visibility
+
+  // List of sectors
+  const sectors = [
+    "Commercial Banks",
+    "Manufacturing And Processing",
+    "Hotels And Tourism",
+    "Others",
+    "Hydro Power",
+    "Tradings",
+    "Non Life Insurance",
+    "Development Banks",
+    "Finance",
+    "Microfinance",
+    "Life Insurance",
+    "Investment",
+  ];
+
+  // Sectors that do NOT require Listed Date and Lock-in Period
+  const excludedSectors = [
+    "Commercial Banks",
+    "Development Banks",
+    "Finance",
+    "Microfinance",
+    "Life Insurance",
+    "Non Life Insurance",
+  ];
 
   // Fetch stock data by stock ID
   const fetchStockData = async () => {
@@ -39,13 +70,18 @@ const EditStockForm = () => {
       if (docSnap.exists()) {
         const stockData = docSnap.data();
         setName(stockData.name);
+        setSector(stockData.sector);
         setListedDate(stockData.listedDate);
         setTotalListedShares(stockData.totalListedShares);
         setPromoterShare(stockData.promoterShare);
+        setPublicShare(stockData.publicShare);
+        setPromoterPublicPercent(stockData.promoterPublicPercent);
+        setLockInPeriod(stockData.lockInPeriod);
         setBookValue(stockData.bookValue);
         setEps(stockData.eps);
         setRemark(stockData.remark);
         setIsEditing(true);
+
         setToastMessage("Data fetched successfully!");
         setToastType("success");
         setShowToast(true);
@@ -65,16 +101,39 @@ const EditStockForm = () => {
     }
   };
 
+  // Handle lock-in period calculation
+  const handleListedDateChange = (e) => {
+    const date = e.target.value;
+    setListedDate(date);
+
+    if (!excludedSectors.includes(sector)) {
+      const calculatedLockIn = new Date(date);
+      calculatedLockIn.setFullYear(calculatedLockIn.getFullYear() + 3);
+      setLockInPeriod(calculatedLockIn.toLocaleDateString());
+    } else {
+      setLockInPeriod("");
+    }
+  };
+
   // Handle form submission to update data
   const handleUpdate = async (e) => {
     e.preventDefault();
+
+    // Automatically calculate derived fields
+    const calculatedPublicShare = totalListedShares - promoterShare;
+    const calculatedPromoterPublicPercent = `${((promoterShare / totalListedShares) * 100).toFixed(2)}%, ${(100 - (promoterShare / totalListedShares) * 100).toFixed(2)}%`;
+
     try {
       const docRef = doc(db, "stocks", stockId);
       await updateDoc(docRef, {
         name,
-        listedDate,
+        sector,
+        listedDate: excludedSectors.includes(sector) ? null : listedDate,
+        lockInPeriod: excludedSectors.includes(sector) ? null : lockInPeriod,
         totalListedShares: parseInt(totalListedShares),
         promoterShare: parseInt(promoterShare),
+        publicShare: calculatedPublicShare,
+        promoterPublicPercent: calculatedPromoterPublicPercent,
         bookValue: parseFloat(bookValue),
         eps: parseFloat(eps),
         remark,
@@ -122,9 +181,13 @@ const EditStockForm = () => {
   const resetForm = () => {
     setStockId("");
     setName("");
+    setSector("");
     setListedDate("");
     setTotalListedShares("");
     setPromoterShare("");
+    setPublicShare("");
+    setPromoterPublicPercent("");
+    setLockInPeriod("");
     setBookValue("");
     setEps("");
     setRemark("");
@@ -158,14 +221,39 @@ const EditStockForm = () => {
           </div>
 
           <div>
-            <label>Listed Date:</label>
-            <input
-              type="date"
-              value={listedDate}
-              onChange={(e) => setListedDate(e.target.value)}
+            <label>Sector:</label>
+            <select
+              value={sector}
+              onChange={(e) => setSector(e.target.value)}
               required
-            />
+            >
+              <option value="">Select Sector</option>
+              {sectors.map((sec, index) => (
+                <option key={index} value={sec}>
+                  {sec}
+                </option>
+              ))}
+            </select>
           </div>
+
+          {!excludedSectors.includes(sector) && (
+            <>
+              <div>
+                <label>Listed Date:</label>
+                <input
+                  type="date"
+                  value={listedDate}
+                  onChange={handleListedDateChange}
+                  required
+                />
+              </div>
+
+              <div>
+                <label>Lock-in Period:</label>
+                <input type="text" value={lockInPeriod} readOnly />
+              </div>
+            </>
+          )}
 
           <div>
             <label>Total Listed Shares:</label>
@@ -185,6 +273,16 @@ const EditStockForm = () => {
               onChange={(e) => setPromoterShare(e.target.value)}
               required
             />
+          </div>
+
+          <div>
+            <label>Public Share:</label>
+            <input type="number" value={publicShare} readOnly />
+          </div>
+
+          <div>
+            <label>% of Promoter & Public:</label>
+            <input type="text" value={promoterPublicPercent} readOnly />
           </div>
 
           <div>

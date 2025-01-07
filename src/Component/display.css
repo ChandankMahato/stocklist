@@ -135,3 +135,30 @@ h1 {
   outline: none;
   border: 2px solid #fff;
 }
+
+
+/* Filter Container Styles */
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.filter-container label {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #1d9200;
+}
+
+.filter-container select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+  color: #000;
+}
+
+.sector-title{
+  padding-top: 30px;
+}
