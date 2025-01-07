@@ -39,7 +39,7 @@ function App() {
   const PrivateRoute = ({ children }) => {
     const navigate = useNavigate(); // Now useNavigate is inside the router context
     useEffect(() => {
-      if (!loading && (!user || user.email !== "cmahato2000@gmail.com")) {
+      if (!loading && (!user || user.email !== "tulsisingh65@gmail.com")) {
         navigate("/"); // Redirect to home page if not logged in or not the correct user
       }
     }, [loading, user, navigate]);
@@ -47,7 +47,7 @@ function App() {
     if (loading) {
       return <div>Loading...</div>;
     }
-    return user && user.email === "cmahato2000@gmail.com" ? children : null;
+    return user && user.email === "tulsisingh65@gmail.com" ? children : null;
   };
 
   return (
